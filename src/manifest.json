@@ -1,0 +1,16 @@
+{
+	"manifest_version": 1,
+	"id": "com.github.tburny.paperless-ngx",
+	"app_min_version": "3.3",
+	"version": "1.0.0",
+	"name": "Paperless NGX integration",
+	"description": "Integrates Paperless NGX into Joplin",
+	"author": "Tobias Brennecke",
+	"homepage_url": "https://github.com/tburny/joplin-plugin-paperless-ngx",
+	"repository_url": "https://github.com/tburny/joplin-plugin-paperless-ngx",
+	"keywords": [],
+	"categories": [],
+	"screenshots": [],
+	"icons": {},
+	"promo_tile": {}
+}
