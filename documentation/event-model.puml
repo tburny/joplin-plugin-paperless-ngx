@@ -1,0 +1,74 @@
+@startuml eventmodel
+' Event Modeling Diagramm für die Joplin-Paperless-ngx Erweiterung
+' Syntax angepasst an die chilit-nl/plantuml-event-modeling v2 Bibliothek
+!include_once https://raw.githubusercontent.com/chilit-nl/plantuml-event-modeling/main/event-modeling-lib.iuml
+
+' --- Konfiguration ---
+$enableAutoAlias()
+$enableAutoSpacing()
+
+' Definition der UI-Lanes (was der Benutzer sieht und bedient)
+$configureWireframeLane(Joplin Benutzer)
+$configureWireframeLane(Joplin Editor)
+
+' Definition der Event-Lanes (wo die "Single Source of Truth" für Daten liegt)
+$configureEventLane(Plugin Einstellungen, $context = "Joplin")
+$configureEventLane(Paperless Dokumente, $context = "Paperless-ngx API")
+$configureEventLane(Joplin Notizen, $context = "Joplin")
+
+' --- Workflow-Modellierung ---
+
+' Slice 1: Konfiguration speichern und testen
+$wireframe(Joplin Einstellungs Seite, Joplin Benutzer)
+$command(Einstellungen speichern)
+$event(Einstellungen wurden gespeichert, Plugin Einstellungen)
+' Read-Model für die Automatisierung
+$view(Gespeicherte Einstellungen)
+
+$extra(Automatischer Verbindungstest)
+' Event löst Automatisierung aus
+$eventarrow(Gespeicherte Einstellungen, Automatischer Verbindungstest)
+$command(Verbindung testen)
+' Event im Kontext der externen API
+$event(Verbindung erfolgreich, Paperless Dokumente)
+' Read-Model, das in der UI angezeigt wird
+$view(Verbindungsstatus)
+
+' Slice 2: Dokumente suchen
+$wireframe(Plugin Panel, Joplin Benutzer)
+$command(Dokumente suchen)
+$event(Suchergebnisse gefunden, Paperless Dokumente)
+$view(Suchergebnis Liste)
+
+' Slice 3: Dokument importieren
+' Benutzer interagiert mit der Ergebnisliste im selben Panel
+$wireframe(Plugin Panel, Joplin Benutzer)
+$command(Dokument importieren)
+' Das Ergebnis ist eine neue Notiz in Joplin
+$event(Dokument wurde importiert, Joplin Notizen)
+$view(Neue Notiz)
+
+' Slice 4: Ergebnis anzeigen (Import)
+' Der Benutzer sieht das Endergebnis
+$wireframe(Joplin Notiz Ansicht, Joplin Benutzer)
+' Das Read-Model wird in der UI angezeigt
+$arrow(Neue Notiz, Joplin Notiz Ansicht)
+
+' Slice 5: Link einfügen
+' Der Benutzer wählt eine andere Aktion aus der Suchergebnisliste
+$wireframe(Plugin Panel, Joplin Benutzer)
+$command(Link für Dokument einfügen)
+' Das Event ändert den Inhalt der aktuell geöffneten Notiz
+$event(Dokument Link eingefügt, Joplin Notizen)
+$view(Editor Inhalt aktualisiert)
+
+' Slice 6: Ergebnis anzeigen (Link)
+' Der Benutzer sieht die Änderung direkt im Editor
+$wireframe(Joplin Editor, Joplin Benutzer)
+' Das Read-Model wird in der UI angezeigt
+$arrow(Editor Inhalt aktualisiert, Joplin Editor)
+
+' Diagramm rendern
+$renderEventModelingDiagram()
+
+@enduml
