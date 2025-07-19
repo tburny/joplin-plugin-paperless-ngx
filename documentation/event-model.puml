@@ -12,7 +12,7 @@ $configureWireframeLane(Joplin Benutzer)
 $configureWireframeLane(Joplin Editor)
 
 ' Definition der Event-Lanes (wo die "Single Source of Truth" für Daten liegt)
-$configureEventLane(Plugin Einstellungen, $context = "Joplin")
+$configureEventLane(Plugin Einstellungen, $context = "Einstellungen")
 $configureEventLane(Paperless Dokumente, $context = "Paperless-ngx API")
 $configureEventLane(Joplin Notizen, $context = "Joplin")
 
