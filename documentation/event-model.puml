@@ -21,18 +21,29 @@ $configureEventLane(Joplin Notizen, $context = "Joplin")
 ' Slice 1: Konfiguration speichern und testen
 $wireframe(Joplin Einstellungs Seite, Joplin Benutzer)
 $command(Einstellungen speichern)
-$event(Einstellungen wurden gespeichert, Plugin Einstellungen)
-' Read-Model für die Automatisierung
-$view(Gespeicherte Einstellungen)
 
-$extra(Automatischer Verbindungstest)
-' Event löst Automatisierung aus
-$eventarrow(Gespeicherte Einstellungen, Automatischer Verbindungstest)
-$command(Verbindung testen)
-' Event im Kontext der externen API
-$event(Verbindung erfolgreich, Paperless Dokumente)
-' Read-Model, das in der UI angezeigt wird
+' Der CommandBus orchestriert die Validierung VOR dem Speichern
+$extra(Verbindung validieren)
+$commandarrow(Einstellungen speichern, Verbindung validieren)
+
+' Zwei mögliche Ausgänge der Validierung
+$event(Einstellungen wurden gespeichert, Plugin Einstellungen)
+$event(Speichern fehlgeschlagen, Plugin Einstellungen)
+
+' Pfeile vom Prozess zu den Events
+$arrow(Verbindung validieren, Einstellungen wurden gespeichert)
+$arrow(Verbindung validieren, Speichern fehlgeschlagen)
+
+' Read-Models, die von den Events aktualisiert werden
+$view(Gespeicherte Einstellungen)
 $view(Verbindungsstatus)
+
+$eventarrow(Einstellungen wurden gespeichert, Gespeicherte Einstellungen)
+$eventarrow(Einstellungen wurden gespeichert, Verbindungsstatus)
+$eventarrow(Speichern fehlgeschlagen, Verbindungsstatus)
+
+' Das Read-Model wird in der UI angezeigt und schließt den Kreis für den Benutzer
+$arrow(Gespeicherte Einstellungen, Joplin Einstellungs Seite)
 
 ' Slice 2: Dokumente suchen
 $wireframe(Plugin Panel, Joplin Benutzer)

@@ -4,9 +4,7 @@
 
 - Die Erweiterung muss eine sichere Verbindung zu einer Paperless-ngx-Instanz herstellen können.
 - Der Benutzer muss die URL der Paperless-ngx-Instanz und einen API-Token in den Joplin-Einstellungen eingeben können.
-- Es muss eine globale Option in den Einstellungen geben, um die gesamte Integration zu aktivieren oder zu deaktivieren.
-- Beim Speichern der Einstellungen muss die Konfiguration automatisch getestet werden.
-- Der Benutzer muss die Verbindung in den Einstellungen jederzeit überprüfen können.
+- **Beim Ändern einer Einstellung wird automatisch versucht, die Konfiguration zu speichern. Dieser Vorgang beinhaltet eine Validierung der eingegebenen Daten durch eine Testverbindung zum Server.**
 
 ## **2\. Dokumentensuche und \-anzeige**
 
@@ -34,11 +32,11 @@
 - Der Benutzer muss einen Link zu einem bestimmten Paperless-Dokument in den Joplin-Editor einfügen können.
 - Beim Einfügen eines Links zu einem Paperless-Dokument soll die Erweiterung automatisch den Dokumententitel von der API abfragen und als Linktext verwenden.
 - Der Benutzer muss das Ergebnis einer Paperless-ngx-Suchanfrage oder eine gespeicherte Ansicht ("Saved View") als formatierte Tabelle in den Joplin-Editor einfügen können.
-- Vor dem Einfügen der Tabelle muss der Benutzer auswählen können, welche Dokumenteneigenschaften (z.B. Titel, Korrespondent, Erstellungsdatum, Tags) als Spalten in der Tabelle angezeigt werden.
+- Vor dem Einfügen der Tabelle muss der Benutzer auswählen können, welche Dokumenteneigenschaften als Spalten in der Tabelle angezeigt werden.
 
 ## **6\. Fehlerbehandlung und Status**
 
-- **Die Erweiterung muss spezifische Fehlerursachen (z.B. fehlende Einstellungen, ungültiger Token, Netzwerkfehler) erkennen und dem Benutzer eine klare, verständliche und lokalisierte Fehlermeldung anzeigen.**
+- Die Erweiterung muss spezifische Fehlerursachen (z.B. fehlende Einstellungen, ungültiger Token, Netzwerkfehler) erkennen und dem Benutzer eine klare, verständliche und lokalisierte Fehlermeldung anzeigen.
 - Wenn die Integration in den Einstellungen deaktiviert ist, dürfen keine UI-Komponenten der Erweiterung (z.B. Panel, Editor-Buttons) sichtbar oder verfügbar sein.
 - Wenn die Verbindung zum Paperless-ngx-Server noch nicht konfiguriert wurde oder fehlschlägt, müssen alle UI-Komponenten der Erweiterung deaktiviert sein oder einen deutlichen Hinweis auf das Konfigurationsproblem anzeigen.
 - Alle Anfragen an die Paperless-API müssen einen angemessenen Timeout haben, um zu verhindern, dass die Joplin-Anwendung bei einer langsamen Verbindung einfriert.
@@ -52,3 +50,8 @@
 
 - **Architektur:** Die Codebasis muss nach den Prinzipien der Clean Architecture und des Domain-Driven Design (Strukturierung nach Bounded Contexts) aufgebaut sein, um eine klare Trennung von Anwendungslogik und Infrastruktur zu gewährleisten.
 - **Testbarkeit:** Die Kernanwendungslogik (Use Cases) muss vollständig von externen Abhängigkeiten (Joplin API, fetch) entkoppelt sein und durch automatisierte Unit-Tests abgedeckt werden.
+- **Entkopplung von Nachrichten und Domäne:** Commands und Queries, die als Nachrichten in das System gelangen, dürfen keine direkten Referenzen auf Domänen-Aggregate oder deren Zustands-Objekte (SettingsState) enthalten. Sie müssen als einfache Daten-Transfer-Objekte (DTOs) mit primitiven Werten formuliert sein.
+- **Trennung von Query-Ergebnissen und Events:** Als Antwort auf eine Query wird ein typsicheres Result-Objekt (z.B. ConnectionResult) zurückgeliefert. Events werden ausschließlich als Ergebnis von zustandsändernden Commands erzeugt.
+- **CQRS-Anwendung:** Es wird CQRS angewendet, das heißt lesende (Queries) und schreibende (Commands) Operationen sind auf Ebene des Anwendungskerns strikt voneinander zu trennen. Außerhalb des Anwendungskerns (z.B. im Composition Root) können diese Operationen zur Orchestrierung von Abläufen kombiniert werden.
+- **Entkopplung von Events und Domäne:** Events, die von der Domäne oder dem Anwendungskern erzeugt werden, dürfen keine direkten Referenzen auf Domänen-Aggregate enthalten. Sie müssen als einfache Daten-Transfer-Objekte (DTOs) formuliert sein, die den geänderten Zustand oder das Ergebnis einer Operation beschreiben.
+- **Selbständigkeit der Domäne:** Die Domänenschicht (domain-Ordner) muss in sich geschlossen sein und darf keine Dateien oder Typen aus äußeren Schichten (z.B. application, ports, infrastructure) importieren.

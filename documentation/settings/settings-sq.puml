@@ -1,0 +1,137 @@
+@startuml
+!theme plain
+title Sequenzdiagramm: Joplin Paperless-ngx Plugin Lebenszyklus
+
+actor "Joplin App" as JoplinApp
+actor "User" as User
+
+box "Plugin-Code"
+    participant "index.ts" as IndexTS
+    
+    box "Infrastructure (Treiber / linke Seite)" #LightSkyBlue
+        participant "settingsForm: SettingsForm" as SettingsForm
+        participant "settingsProjection: JoplinSettingsProjection" as SettingsProjection
+    end box
+    
+    box "Application Core" #LightGreen
+        participant "commandBus: SettingsCommandBus" as CommandBus
+        participant "commandHandler: SettingsCommandHandler" as CommandHandler
+        participant "queryHandler: SettingsQueryHandler" as QueryHandler
+    end box
+
+    box "Infrastructure (Getriebene / rechte Seite)" #LightGoldenRodYellow
+        participant "settingsRepository: JoplinSettingsRepositoryAdapter" as SettingsRepo
+        participant "paperlessAdapter: PaperlessAdapter" as PaperlessAdapter
+    end box
+end box
+
+== Phase 1: Plugin-Initialisierung (onStart) ==
+
+JoplinApp -> IndexTS : joplin.plugins.register({ onStart })
+activate IndexTS
+
+IndexTS -> SettingsRepo ** : new JoplinSettingsRepositoryAdapter()
+IndexTS -> PaperlessAdapter ** : new PaperlessAdapter() 
+IndexTS -> CommandHandler ** : new SettingsCommandHandler(settingsRepository)
+IndexTS -> QueryHandler ** : new SettingsQueryHandler(paperlessAdapter, settingsRepository)
+IndexTS -> SettingsForm ** : new SettingsForm()
+IndexTS -> SettingsProjection ** : new JoplinSettingsProjection()
+
+IndexTS -> CommandBus ** : new SettingsCommandBus(...)
+note right of IndexTS
+  Verdrahtet CommandHandler, QueryHandler
+  und Projection mit dem Bus.
+end note
+
+IndexTS -> SettingsRepo : onSettingsChange(commandBus.dispatch)
+note right of SettingsRepo
+  Registriert den CommandBus als Listener
+  für Einstellungsänderungen aus der Joplin-API.
+end note
+
+IndexTS -> QueryHandler : getSettings({ type: "GET_SETTINGS" })
+activate QueryHandler
+QueryHandler -> SettingsRepo : load()
+activate SettingsRepo
+SettingsRepo --> QueryHandler : gibt gespeicherte Einstellungen zurück
+deactivate SettingsRepo
+QueryHandler --> IndexTS : gibt initialen Zustand zurück
+deactivate QueryHandler
+
+IndexTS -> SettingsForm : render(initialState)
+activate SettingsForm
+note right of SettingsForm
+  Rendert die UI-Komponenten
+  (z.B. Einstellungsdialog)
+end note
+deactivate SettingsForm
+
+deactivate IndexTS
+
+== Phase 2: Benutzer ändert Einstellungen ==
+
+User -> JoplinApp : Ändert Einstellung im UI
+JoplinApp -> SettingsRepo : ruft onChange-Callback auf
+activate SettingsRepo
+
+SettingsRepo -> CommandBus : dispatch({ type: "SAVE_SETTINGS", ... })
+activate CommandBus
+
+note over CommandBus
+  Der Command Bus orchestriert den gesamten Prozess:
+  Validierung, Ausführung und Ergebnis-Projektion.
+end note
+
+CommandBus -> QueryHandler : validateSettings({ type: "VALIDATE_SETTINGS", ... })
+activate QueryHandler
+QueryHandler -> PaperlessAdapter : authenticate(url, token)
+activate PaperlessAdapter
+PaperlessAdapter --> QueryHandler : gibt ConnectionResult zurück
+deactivate PaperlessAdapter
+QueryHandler --> CommandBus : gibt Validierungsergebnis zurück
+deactivate QueryHandler
+
+alt Erfolgreiche Verbindung
+
+    CommandBus -> CommandHandler : execute({ type: "SAVE_SETTINGS", ... })
+    activate CommandHandler
+    
+    CommandHandler -> CommandHandler : validateSettings(command)
+    note right of CommandHandler : Domänen-Validierung (z.B. URL-Format)
+    
+    CommandHandler -> SettingsRepo : save(newSettings)
+    activate SettingsRepo
+    SettingsRepo --> CommandHandler
+    deactivate SettingsRepo
+    
+    CommandHandler --> CommandBus : gibt [SETTINGS_SAVED] Event zurück
+    deactivate CommandHandler
+    
+    CommandBus -> SettingsProjection : project(SETTINGS_SAVED)
+    activate SettingsProjection
+    SettingsProjection -> SettingsProjection : console.info("Settings saved...")
+    deactivate SettingsProjection
+
+else Fehler bei der Verbindung
+
+    note right of CommandBus
+      CommandBus fängt den Fehler oder das negative
+      Ergebnis vom QueryHandler und erzeugt ein
+      "SETTINGS_SAVE_FAILED" Event mit passender "reason".
+    end note
+    
+    CommandBus -> SettingsProjection : project({ type: "SETTINGS_SAVE_FAILED", reason: ... })
+    activate SettingsProjection
+    SettingsProjection -> JoplinApp : joplin.views.dialogs.showMessageBox(...)
+    note left of SettingsProjection
+      Zeigt dem Benutzer eine
+      spezifische Fehlermeldung an.
+    end note
+    deactivate SettingsProjection
+
+end
+
+deactivate CommandBus
+deactivate SettingsRepo
+
+@enduml
